@@ -590,7 +590,13 @@ public class PersistQueueImpl implements PersistQueue {
             try {
 
                 raf.seek(offset);
-                int length = raf.readShort() & 0xffff;
+                int length = raf.readShort();
+                if( length == -1 ) {
+                	length = raf.readInt();
+                } else {
+                	length = length & 0xffff;
+                }
+                
                 bs = new byte[length];
                 raf.read(bs);
 
@@ -635,7 +641,13 @@ public class PersistQueueImpl implements PersistQueue {
 
                 position = (int) raf.length();
                 raf.seek(position);
-                raf.writeShort(bs.length);
+                if( bs.length >= 65535 ) {
+                	raf.writeShort(-1);
+                	raf.writeInt(bs.length);
+                } else {
+                	raf.writeShort(bs.length);
+                }
+                
                 raf.write(bs);
 
             } catch (IOException e) {
@@ -646,8 +658,7 @@ public class PersistQueueImpl implements PersistQueue {
             mbb.position(writePosition * DIR_ENTRY_SIZE);
             mbb.put(STATUS_AVAILABLE);
             mbb.putInt(position);
-            // mbb.putShort((short) bs.length);
-            
+
             if( cacheSize > 0 ) {
                 if (msgMap.size() < cacheSize) {
                     msgMap.put(writePosition, bs);
